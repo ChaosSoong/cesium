@@ -678,8 +678,9 @@ define([
     var scratchCartographicMax = new Cartographic();
 
     function computeRectangle(positions, ellipsoid, width, cornerType) {
-        var length = positions.length - 1;
-        if (length === 0) {
+        var cleanPositions = arrayRemoveDuplicates(positions, Cartesian3.equalsEpsilon);
+        var length = cleanPositions.length - 1;
+        if (length === 0 || width === 0) {
             return new Rectangle();
         }
         var halfWidth = width * 0.5;
@@ -692,8 +693,8 @@ define([
         var lat, lon;
         if (cornerType === CornerType.ROUNDED) {
             // Compute start cap
-            var first = positions[0];
-            Cartesian3.subtract(first, positions[1], scratchCartesianOffset);
+            var first = cleanPositions[0];
+            Cartesian3.subtract(first, cleanPositions[1], scratchCartesianOffset);
             Cartesian3.normalize(scratchCartesianOffset, scratchCartesianOffset);
             Cartesian3.multiplyByScalar(scratchCartesianOffset, halfWidth, scratchCartesianOffset);
             Cartesian3.add(first, scratchCartesianOffset, scratchCartesianEnds);
@@ -709,13 +710,13 @@ define([
 
         // Compute the rest
         for (var i = 0; i < length; ++i) {
-            computeOffsetPoints(positions[i], positions[i+1], ellipsoid, halfWidth,
+            computeOffsetPoints(cleanPositions[i], cleanPositions[i+1], ellipsoid, halfWidth,
                 scratchCartographicMin, scratchCartographicMax);
         }
 
         // Compute ending point
-        var last = positions[length];
-        Cartesian3.subtract(last, positions[length-1], scratchCartesianOffset);
+        var last = cleanPositions[length];
+        Cartesian3.subtract(last, cleanPositions[length-1], scratchCartesianOffset);
         Cartesian3.normalize(scratchCartesianOffset, scratchCartesianOffset);
         Cartesian3.multiplyByScalar(scratchCartesianOffset, halfWidth, scratchCartesianOffset);
         Cartesian3.add(last, scratchCartesianOffset, scratchCartesianEnds);
@@ -808,6 +809,8 @@ define([
      * @param {CorridorGeometry} value The value to pack.
      * @param {Number[]} array The array to pack into.
      * @param {Number} [startingIndex=0] The index into the array at which to start packing the elements.
+     *
+     * @returns {Number[]} The array that was packed into
      */
     CorridorGeometry.pack = function(value, array, startingIndex) {
         //>>includeStart('debug', pragmas.debug);
@@ -843,6 +846,8 @@ define([
         array[startingIndex++] = value._extrudedHeight;
         array[startingIndex++] = value._cornerType;
         array[startingIndex]   = value._granularity;
+
+        return array;
     };
 
     var scratchEllipsoid = Ellipsoid.clone(Ellipsoid.UNIT_SPHERE);
